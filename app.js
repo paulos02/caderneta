@@ -1,4 +1,4 @@
-const TOTAL = 48;
+const TOTAL = 1000;
 const PER_PAGE = 16;
 const STORAGE_KEY = "caderneta_v1";
 
@@ -279,3 +279,4 @@ resetBtn.onclick = () => {
 /* ===== Init ===== */
 
 render();
+
