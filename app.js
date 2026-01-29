@@ -1,3 +1,7 @@
+const DOUBLE_TAP_DELAY = 300; // ms
+let lastTapTime = 0;
+let lastTapIndex = null;
+
 const TOTAL = 1000;
 const PER_PAGE = 16;
 const STORAGE_KEY = "caderneta_v1";
@@ -142,7 +146,35 @@ function render() {
       const img = document.createElement("img");
       img.src = cell.dataUrl;
       slot.appendChild(img);
-      slot.onclick = () => openViewer(i);
+      slot.onclick = (e) => {
+  const now = Date.now();
+
+  // double tap / double click
+  if (lastTapIndex === i && now - lastTapTime < DOUBLE_TAP_DELAY) {
+    // remover cromo
+    state[i] = null;
+    saveState();
+    render();
+
+    // reset tap state
+    lastTapTime = 0;
+    lastTapIndex = null;
+    return;
+  }
+
+  // primeiro tap → abre viewer
+  lastTapTime = now;
+  lastTapIndex = i;
+
+  // pequeno delay para permitir double tap
+  setTimeout(() => {
+    if (lastTapIndex === i) {
+      openViewer(i);
+      lastTapIndex = null;
+    }
+  }, DOUBLE_TAP_DELAY);
+};
+
     }
 
     page.appendChild(slot);
