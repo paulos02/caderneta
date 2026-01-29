@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8">
+  <title>Caderneta de Cromos</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>Caderneta de Cromos</h1>
+
+<div class="toolbar">
+  <button id="prevBtn">◀ Página</button>
+  <span id="pageInfo"></span>
+  <button id="nextBtn">Página ▶</button>
+
+  <button id="importFolderBtn">Importar pasta</button>
+  <button id="resetBtn" class="danger">Reiniciar álbum</button>
+</div>
+
+<p class="hint">
+  • Clica num espaço vazio para colar um cromo<br>
+  • Clica num cromo colado para o ver em grande<br>
+  • Importar pasta ignora cromos repetidos
+</p>
+
+<div id="album" class="album"></div>
+
+<input id="fileInput" type="file" accept="image/*" hidden>
+<input id="folderInput" type="file" accept="image/*" webkitdirectory hidden>
+
+<!-- VIEWER -->
+<div id="viewer" class="viewer hidden">
+  <div class="viewer-backdrop"></div>
+  <div class="viewer-content">
+    <div class="viewer-header">
+      <span id="viewerNum"></span>
+      <button id="viewerClose">✕</button>
+    </div>
+    <img id="viewerImg">
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

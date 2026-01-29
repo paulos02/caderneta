@@ -1,0 +1,148 @@
+body {
+  font-family: system-ui, Arial, sans-serif;
+  background: #f4f1e6;
+  padding: 20px;
+}
+
+h1 { margin-bottom: 10px; }
+
+.hint {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.toolbar button {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #c9b36b;
+  background: #fff3c4;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.toolbar button.danger {
+  background: #ffe1e1;
+  border-color: #d88;
+}
+
+#pageInfo { font-weight: 700; }
+
+.album {
+  width: max-content;
+  padding: 20px;
+  background: #efe6c8;
+  border: 2px solid #e0d2a4;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.15);
+  transition: transform .25s ease, opacity .25s ease;
+}
+
+.album.turn {
+  transform: translateX(20px);
+  opacity: 0;
+}
+
+.page {
+  display: grid;
+  grid-template-columns: repeat(4, 140px);
+  gap: 18px;
+}
+
+.slot {
+  width: 140px;
+  aspect-ratio: 2 / 3;
+  background: #fff;
+  border: 3px solid #e6d9b4;
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.slot.empty::after {
+  content: "clicar para colar";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: rgba(0,0,0,.35);
+  font-size: 12px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.num {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  background: rgba(255,255,255,.85);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+/* Viewer */
+
+.viewer.hidden { display: none; }
+
+.viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.viewer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.75);
+}
+
+.viewer-content {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 40px;
+}
+
+.viewer-header {
+  position: absolute;
+  top: 20px;
+  display: flex;
+  gap: 16px;
+  background: rgba(0,0,0,.6);
+  color: #fff;
+  padding: 6px 14px;
+  border-radius: 999px;
+}
+
+.viewer-header button {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.viewer-content img {
+  max-height: 90vh;
+  aspect-ratio: 2 / 3;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 30px 60px rgba(0,0,0,.5);
+}
