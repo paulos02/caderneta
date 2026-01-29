@@ -145,4 +145,9 @@ h1 { margin-bottom: 10px; }
   border-radius: 16px;
   background: #fff;
   box-shadow: 0 30px 60px rgba(0,0,0,.5);
+    /* 👇 essenciais para swipe */
+  touch-action: pan-y;
+  user-select: none;
+  cursor: grab;
 }
+
