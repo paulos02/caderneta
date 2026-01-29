@@ -1,6 +1,5 @@
-const DOUBLE_TAP_DELAY = 300; // ms
-let lastTapTime = 0;
-let lastTapIndex = null;
+const DOUBLE_TAP_DELAY = 300;
+let viewerLastTap = 0;
 
 const TOTAL = 1000;
 const PER_PAGE = 16;
@@ -146,35 +145,7 @@ function render() {
       const img = document.createElement("img");
       img.src = cell.dataUrl;
       slot.appendChild(img);
-      slot.onclick = (e) => {
-  const now = Date.now();
-
-  // double tap / double click
-  if (lastTapIndex === i && now - lastTapTime < DOUBLE_TAP_DELAY) {
-    // remover cromo
-    state[i] = null;
-    saveState();
-    render();
-
-    // reset tap state
-    lastTapTime = 0;
-    lastTapIndex = null;
-    return;
-  }
-
-  // primeiro tap → abre viewer
-  lastTapTime = now;
-  lastTapIndex = i;
-
-  // pequeno delay para permitir double tap
-  setTimeout(() => {
-    if (lastTapIndex === i) {
-      openViewer(i);
-      lastTapIndex = null;
-    }
-  }, DOUBLE_TAP_DELAY);
-};
-
+      slot.onclick = () => openViewer(i);
     }
 
     page.appendChild(slot);
@@ -286,7 +257,9 @@ function openViewer(index) {
   viewerIndex = index;
   updateViewer();
   viewer.classList.remove("hidden");
+  viewerLastTap = 0; // reset
 }
+
 
 function closeViewer() {
   viewer.classList.add("hidden");
@@ -367,6 +340,25 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight") nextSticker();
   if (e.key === "Escape") closeViewer();
 });
+
+viewerImg.addEventListener("click", () => {
+  const now = Date.now();
+
+  if (now - viewerLastTap < DOUBLE_TAP_DELAY) {
+    // duplo tap → remover cromo
+    state[viewerIndex] = null;
+    saveState();
+
+    closeViewer();
+    render();
+
+    viewerLastTap = 0;
+    return;
+  }
+
+  viewerLastTap = now;
+});
+
 
 /* ================= Reset ================= */
 
