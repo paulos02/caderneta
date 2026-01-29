@@ -2,6 +2,11 @@ const TOTAL = 1000;
 const PER_PAGE = 16;
 const STORAGE_KEY = "caderneta_v1";
 
+// Tamanho final do cromo (2:3)
+const TARGET_W = 400;
+const TARGET_H = 600;
+const JPEG_QUALITY = 0.8;
+
 const album = document.getElementById("album");
 const fileInput = document.getElementById("fileInput");
 const folderInput = document.getElementById("folderInput");
@@ -22,7 +27,7 @@ let currentPage = 0;
 let pendingIndex = null;
 let viewerIndex = null;
 
-/* ===== Estado ===== */
+/* ================= Estado ================= */
 
 function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -38,7 +43,7 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-/* ===== Hash (repetidos por bytes) ===== */
+/* ================= Hash (repetidos por bytes) ================= */
 
 async function hashFile(file) {
   const buffer = await file.arrayBuffer();
@@ -54,13 +59,58 @@ function hashExists(hash) {
   return state.some(cell => cell && cell.hash === hash);
 }
 
-/* ===== Util ===== */
-
-function findNextEmptyIndex() {
+function nextEmptyIndex() {
   return state.findIndex(c => !c);
 }
 
-/* ===== Render ===== */
+/* ================= Redimensionar (crop centro + resize 2:3) ================= */
+
+function resizeImageToDataUrl(file) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      img.onload = () => {
+        const srcRatio = img.width / img.height;
+        const targetRatio = TARGET_W / TARGET_H;
+
+        let sx, sy, sw, sh;
+
+        if (srcRatio > targetRatio) {
+          // mais largo -> cortar laterais
+          sh = img.height;
+          sw = sh * targetRatio;
+          sx = (img.width - sw) / 2;
+          sy = 0;
+        } else {
+          // mais alto -> cortar topo/fundo
+          sw = img.width;
+          sh = sw / targetRatio;
+          sx = 0;
+          sy = (img.height - sh) / 2;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = TARGET_W;
+        canvas.height = TARGET_H;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, TARGET_W, TARGET_H);
+
+        resolve(canvas.toDataURL("image/jpeg", JPEG_QUALITY));
+      };
+
+      img.onerror = () => resolve(null);
+      img.src = reader.result;
+    };
+
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ================= Render ================= */
 
 function render() {
   album.innerHTML = "";
@@ -107,7 +157,7 @@ function render() {
   nextBtn.disabled = currentPage === totalPages - 1;
 }
 
-/* ===== Upload individual (clicar no quadrado) ===== */
+/* ================= Upload individual ================= */
 
 fileInput.onchange = async () => {
   try {
@@ -116,68 +166,72 @@ fileInput.onchange = async () => {
 
     const hash = await hashFile(file);
     if (hashExists(hash)) {
-      // repetido: ignora sem erro
+      // repetido: ignora silenciosamente
       pendingIndex = null;
-      fileInput.value = "";
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      state[pendingIndex] = { dataUrl: reader.result, hash };
-      saveState();
-      render();
+    const dataUrl = await resizeImageToDataUrl(file);
+    if (!dataUrl) {
       pendingIndex = null;
-    };
-    reader.readAsDataURL(file);
+      return;
+    }
+
+    state[pendingIndex] = { dataUrl, hash };
+
+    try { saveState(); }
+    catch (e) {
+      // se rebentar quota: não crasha, apenas recarrega para libertar e manter consistência
+      alert("Sem espaço no browser. Usa 'Reiniciar álbum' ou reduz o tamanho das imagens.");
+      return;
+    }
+
+    render();
+    pendingIndex = null;
   } finally {
     fileInput.value = "";
   }
 };
 
-/* ===== Importar pasta (preencher próximos espaços livres) ===== */
+/* ================= Importar pasta ================= */
 
 importFolderBtn.onclick = () => folderInput.click();
 
 folderInput.onchange = async () => {
   try {
     const files = Array.from(folderInput.files);
-    let slotIndex = findNextEmptyIndex();
+    let idx = nextEmptyIndex();
 
     for (const file of files) {
-      if (slotIndex === -1) break;                 // álbum cheio
+      if (idx === -1) break; // álbum cheio
       if (!file.type.startsWith("image/")) continue;
 
       let hash;
-      try {
-        hash = await hashFile(file);
-      } catch {
-        continue; // sem erros
-      }
+      try { hash = await hashFile(file); }
+      catch { continue; }
 
-      if (hashExists(hash)) continue;              // repetido: ignora
+      if (hashExists(hash)) continue; // repetido: ignora
 
-      const dataUrl = await new Promise((resolve) => {
-        const r = new FileReader();
-        r.onload = () => resolve(r.result);
-        r.onerror = () => resolve(null);
-        r.readAsDataURL(file);
-      });
-
+      const dataUrl = await resizeImageToDataUrl(file);
       if (!dataUrl) continue;
 
-      state[slotIndex] = { dataUrl, hash };
-      slotIndex = findNextEmptyIndex();
+      state[idx] = { dataUrl, hash };
+      idx = nextEmptyIndex();
     }
 
-    saveState();
+    try { saveState(); }
+    catch (e) {
+      alert("Sem espaço no browser. Usa 'Reiniciar álbum' ou reduz o tamanho das imagens.");
+      return;
+    }
+
     render();
   } finally {
     folderInput.value = "";
   }
 };
 
-/* ===== Paginação (efeito de mudar página) ===== */
+/* ================= Paginação ================= */
 
 function turnPage(next) {
   album.classList.add("turn");
@@ -189,13 +243,12 @@ function turnPage(next) {
 }
 
 prevBtn.onclick = () => currentPage > 0 && turnPage(false);
-
 nextBtn.onclick = () => {
   const max = Math.ceil(TOTAL / PER_PAGE) - 1;
   currentPage < max && turnPage(true);
 };
 
-/* ===== Viewer (abrir/fechar + swipe + setas) ===== */
+/* ================= Viewer + Navegação (swipe/drag/teclas) ================= */
 
 function openViewer(index) {
   viewerIndex = index;
@@ -243,19 +296,37 @@ viewer.addEventListener("click", (e) => {
   if (e.target.classList.contains("viewer-backdrop")) closeViewer();
 });
 
-/* Swipe (touch) */
-let startX = null;
+/* Touch swipe */
+let touchStartX = null;
 viewerImg.addEventListener("touchstart", (e) => {
-  startX = e.touches[0].clientX;
+  touchStartX = e.touches[0].clientX;
 }, { passive: true });
 
 viewerImg.addEventListener("touchend", (e) => {
-  if (startX === null) return;
-  const dx = e.changedTouches[0].clientX - startX;
+  if (touchStartX === null) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
   if (dx > 50) prevSticker();
   else if (dx < -50) nextSticker();
-  startX = null;
+  touchStartX = null;
 }, { passive: true });
+
+/* Mouse drag swipe */
+let dragStartX = null;
+let dragging = false;
+
+viewerImg.addEventListener("mousedown", (e) => {
+  dragging = true;
+  dragStartX = e.clientX;
+});
+
+window.addEventListener("mouseup", (e) => {
+  if (!dragging) return;
+  const dx = e.clientX - dragStartX;
+  if (dx > 80) prevSticker();
+  else if (dx < -80) nextSticker();
+  dragging = false;
+  dragStartX = null;
+});
 
 /* Teclado */
 document.addEventListener("keydown", (e) => {
@@ -265,23 +336,14 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeViewer();
 });
 
-/* ===== Reset ===== */
+/* ================= Reset ================= */
 
 resetBtn.onclick = () => {
   if (!confirm("Reiniciar a caderneta?")) return;
-  // limpar tudo
   localStorage.removeItem(STORAGE_KEY);
-  // garantir libertação total
-  state = [];
-  pendingIndex = null;
-  viewerIndex = null;
-  // reload forçado (liberta quota)
-  location.reload();
+  location.reload(); // liberta quota imediatamente
 };
 
-
-/* ===== Init ===== */
+/* ================= Init ================= */
 
 render();
-
-
