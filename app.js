@@ -269,14 +269,19 @@ document.addEventListener("keydown", (e) => {
 
 resetBtn.onclick = () => {
   if (!confirm("Reiniciar a caderneta?")) return;
+  // limpar tudo
   localStorage.removeItem(STORAGE_KEY);
-  state = Array(TOTAL).fill(null);
-  currentPage = 0;
-  closeViewer();
-  render();
+  // garantir libertação total
+  state = [];
+  pendingIndex = null;
+  viewerIndex = null;
+  // reload forçado (liberta quota)
+  location.reload();
 };
+
 
 /* ===== Init ===== */
 
 render();
+
 
